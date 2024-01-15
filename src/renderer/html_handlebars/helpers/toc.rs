@@ -26,12 +26,11 @@ impl HelperDef for RenderToc {
         // get value from context data
         // rc.get_path() is current json parent path, you should always use it like this
         // param is the key of value you want to display
-        let chapters = rc.evaluate(ctx, "@root/chapters").and_then(|c| {
-            serde_json::value::from_value::<Vec<BTreeMap<String, String>>>(c.as_json().clone())
-                .map_err(|_| {
-                    RenderErrorReason::Other("Could not decode the JSON data".to_owned()).into()
-                })
-        })?;
+        let chapters = rc.evaluate(ctx, "@root/chapters")?;
+        let chapters = chapters.as_json().as_array().unwrap().iter().map(|i| {
+            serde_json::value::from_value::<BTreeMap<String, String>>(i.to_owned())
+                .map_err(|_| RenderErrorReason::Other("Could not decode the JSON data".to_owned()))
+        });
         let current_path = rc
             .evaluate(ctx, "@root/path")?
             .as_json()
@@ -74,6 +73,7 @@ impl HelperDef for RenderToc {
         let mut is_first_chapter = ctx.data().get("is_index").is_some();
 
         for item in chapters {
+            let item = item?;
             // Spacer
             if item.get("spacer").is_some() {
                 out.write("<li class=\"spacer\"></li>")?;
