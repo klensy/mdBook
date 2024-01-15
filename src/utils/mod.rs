@@ -192,6 +192,16 @@ pub fn new_cmark_parser(text: &str, curly_quotes: bool) -> Parser<'_, '_> {
 
 pub fn render_markdown_with_path(text: &str, curly_quotes: bool, path: Option<&Path>) -> String {
     let mut s = String::with_capacity(text.len() * 3 / 2);
+    render_markdown_with_path_to(text, curly_quotes, path, &mut s);
+    s
+}
+
+pub(crate) fn render_markdown_with_path_to(
+    text: &str,
+    curly_quotes: bool,
+    path: Option<&Path>,
+    out: &mut String,
+) {
     let p = new_cmark_parser(text, curly_quotes);
     let events = p
         .map(clean_codeblock_headers)
@@ -201,8 +211,7 @@ pub fn render_markdown_with_path(text: &str, curly_quotes: bool, path: Option<&P
             a.into_iter().chain(b)
         });
 
-    html::push_html(&mut s, events);
-    s
+    html::push_html(out, events);
 }
 
 /// Wraps tables in a `.table-wrapper` class to apply overflow-x rules to.
