@@ -55,11 +55,11 @@ fn find_chapter(
 ) -> Result<Option<StringMap>, RenderError> {
     debug!("Get data from context");
 
-    let chapters = rc.evaluate(ctx, "@root/chapters").and_then(|c| {
-        serde_json::value::from_value::<Vec<StringMap>>(c.as_json().clone()).map_err(|_| {
-            RenderErrorReason::Other("Could not decode the JSON data".to_owned()).into()
-        })
-    })?;
+    let chapters = rc.evaluate(ctx, "@root/chapters")?;
+    let chapters = chapters.as_json().as_array().unwrap().iter().map(|i| {
+        serde_json::value::from_value::<BTreeMap<String, String>>(i.to_owned())
+            .map_err(|_| RenderErrorReason::Other("Could not decode the JSON data".to_owned()))
+    });
 
     let base_path = rc
         .evaluate(ctx, "@root/path")?
@@ -77,14 +77,13 @@ fn find_chapter(
         match target {
             Target::Previous => return Ok(None),
             Target::Next => match chapters
-                .iter()
                 .filter(|chapter| {
                     // Skip things like "spacer"
-                    chapter.contains_key("path")
+                    chapter.as_ref().unwrap().contains_key("path")
                 })
                 .nth(1)
             {
-                Some(chapter) => return Ok(Some(chapter.clone())),
+                Some(chapter) => return Ok(Some(chapter?)),
                 None => return Ok(None),
             },
         }
@@ -95,6 +94,7 @@ fn find_chapter(
     debug!("Search for chapter");
 
     for item in chapters {
+        let item = item?;
         match item.get("path") {
             Some(path) if !path.is_empty() => {
                 if let Some(previous) = previous {
